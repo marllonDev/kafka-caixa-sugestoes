@@ -1,105 +1,82 @@
 # =================================================================
 #  ARQUIVO DOCKER-COMPOSE PARA O PROJETO "CAIXA DE SUGESTÕES"
 # =================================================================
-# Versão da especificação do Docker Compose. '3.8' é uma versão
-# moderna e estável que suporta todos os recursos que precisamos.
-version: '3.8'
-
-# A seção 'services' é onde definimos todos os "contêineres" ou
-# "serviços" que nossa aplicação precisa para rodar.
-# No nosso caso, o Kafka e o PostgreSQL.
+# A seção 'services' é onde definimos todos os "aplicativos" ou "peças"
+# que nosso projeto precisa para funcionar em conjunto.
 services:
 
-  # -------------------
-  # SERVIÇO DO KAFKA
-  # -------------------
-  # Usaremos uma única instância do Kafka rodando no modo KRaft.
-  # KRaft é o novo padrão do Kafka que NÃO precisa mais do Zookeeper
-  # para gerenciar o estado do cluster. Isso torna nosso ambiente
-  # mais simples, leve e moderno.
+  # --- SERVIÇO DO KAFKA ---
+  # Esta é a definição do nosso servidor Kafka.
   kafka:
-    # A imagem Docker que vamos usar. 'confluentinc/cp-kafka' é uma
-    # imagem popular e bem mantida pela Confluent. Usaremos a versão 7.7.0,
-    # que é a mais estável e recente em 2025.
-    image: confluentinc/cp-kafka:7.7.0
-    # O nome do contêiner para fácil identificação.
+    # A "planta" ou "molde" do nosso contêiner. Estamos usando a imagem da Bitnami,
+    # versão 3.7, que é a nossa escolha mais estável e direta.
+    image: bitnami/kafka:3.7
+    # Um nome simples e legível para o nosso contêiner, para fácil identificação.
     container_name: kafka
-    # Mapeamento de portas. Essencial para que possamos nos conectar
-    # ao Kafka de fora do ambiente Docker (da nossa máquina local).
-    # - A porta 9092 é a porta padrão que os clientes Kafka (nosso Python) usam.
-    # - A porta 29092 será uma porta "interna" que o próprio Kafka usará.
+    # A seção 'ports' define as "janelas" do contêiner para o mundo exterior (seu computador).
     ports:
+      # Mapeia a porta 9092 do seu computador para a porta 9092 do contêiner.
+      # É através dela que nossa API Python irá se comunicar com o Kafka.
+      # Formato: "PORTA_NO_SEU_PC:PORTA_NO_CONTAINER"
       - "9092:9092"
-      - "29092:29092"
-    # A seção 'environment' é crucial. Aqui configuramos o Kafka.
+    # A seção 'environment' é o "painel de controle" do Kafka. Aqui passamos as
+    # instruções de como ele deve se configurar e se comportar ao iniciar.
     environment:
-      # CONFIGURAÇÃO DO LISTENER: Como o Kafka "ouve" o mundo.
-      # Esta é a parte mais crítica e onde muitos erros acontecem.
-      # KAFKA_LISTENERS: Define as portas que o Kafka vai usar para escutar.
-      #   - LISTENER_DOCKER_INTERNAL: para comunicação DENTRO da rede Docker.
-      #   - LISTENER_DOCKER_EXTERNAL: para comunicação de FORA da rede Docker.
-      KAFKA_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka:29092,LISTENER_DOCKER_EXTERNAL://kafka:9092
-      # KAFKA_ADVERTISED_LISTENERS: Como os clientes devem se conectar.
-      #   - Para clientes DENTRO da rede Docker (outro contêiner), eles devem usar 'kafka:29092'.
-      #   - Para clientes FORA (nossa máquina), eles devem usar 'localhost:9092'.
-      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka:29092,LISTENER_DOCKER_EXTERNAL://localhost:9092
-      # KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: Define o protocolo de segurança para cada listener.
-      #   'PLAINTEXT' significa sem criptografia, o que é ok para desenvolvimento local.
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
-      # KAFKA_INTER_BROKER_LISTENER_NAME: Qual listener os brokers devem usar para se comunicar entre si.
-      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      # --- Configuração para KRaft (modo sem Zookeeper) ---
+      # O prefixo 'KAFKA_CFG_' é um padrão da imagem da Bitnami.
 
-      # CONFIGURAÇÃO DO KRAFT (O SUBSTITUTO DO ZOOKEEPER)
-      # KAFKA_PROCESS_ROLES: Define os papéis deste nó Kafka. 'broker,controller' significa
-      #   que ele será um "nó combinado", atuando como "chefe" e "operário" ao mesmo tempo.
-      #   Perfeito para um ambiente simples.
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      # KAFKA_NODE_ID: Um identificador único para este nó no cluster.
-      KAFKA_NODE_ID: 1
-      # KAFKA_CONTROLLER_QUORUM_VOTERS: Informa quem são os nós que podem votar para eleger o "chefe".
-      #   Como só temos um nó, ele vota em si mesmo.
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      # KAFKA_CONTROLLER_LISTENER_NAMES: Informa qual listener os controllers usam.
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      
-      # CONFIGURAÇÕES GERAIS DO BROKER
-      # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: Fator de replicação para o tópico interno
-      #   que guarda os offsets dos consumidores. '1' porque só temos um broker.
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      # KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: Um pequeno delay para dar tempo dos
-      #   consumidores entrarem no grupo antes do Kafka rebalancear as partições.
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      # KAFKA_AUTO_CREATE_TOPICS_ENABLE: Para facilitar, permitimos que os tópicos sejam
-      #   criados automaticamente quando um produtor tenta enviar uma mensagem para um
-      #   tópico que ainda não existe. Ótimo para desenvolvimento.
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      # Em modo KRaft, cada nó (servidor) do Kafka precisa de um ID único.
+      # Como só temos um, o chamamos de '0'.
+      - KAFKA_CFG_NODE_ID=0
+      # Dizemos para esta instância do Kafka que ela deve atuar em dois papéis:
+      # 'controller' (o "chefe" que gerencia o cluster) e 'broker' (o "operário"
+      # que armazena e entrega as mensagens). Perfeito para um ambiente de desenvolvimento.
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      # Define um nome para o canal de comunicação interno que o 'controller' usa.
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # Define todos os "ouvidos" do nosso Kafka.
+      # - 'PLAINTEXT://:9092': O ouvido principal para aplicações (nosso Python).
+      # - 'CONTROLLER://:9093': O ouvido privado para as tarefas de gerenciamento do 'controller'.
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # Este é o "endereço público" que o Kafka informa aos seus clientes.
+      # Ele diz: "Se você estiver fora da rede Docker (como nossa API rodando localmente),
+      # conecte-se a mim através do 'localhost' na porta 9092".
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      # Define quem são os nós que podem votar para eleger o líder do cluster.
+      # Como só temos o nó '0', ele vota em si mesmo no endereço 'kafka:9093'.
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      # Uma conveniência para o desenvolvimento. Permite que um tópico seja criado
+      # automaticamente se um produtor tentar enviar uma mensagem para ele e ele não existir.
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
 
-  # -------------------
-  # SERVIÇO DO POSTGRES
-  # -------------------
-  # Nosso "arquivo de aço", o banco de dados para guardar as sugestões.
+  # --- SERVIÇO DO POSTGRES ---
+  # A definição do nosso banco de dados.
   postgres:
-    # Usando a imagem oficial do PostgreSQL, na versão 17, a mais recente e estável.
+    # A planta do nosso banco de dados, usando a imagem oficial do PostgreSQL na versão 17.
     image: postgres:17
+    # Nome amigável para o contêiner do banco.
     container_name: postgres
-    # Mapeamento de porta para que possamos nos conectar ao banco
-    # usando uma ferramenta de banco de dados (DBeaver, DataGrip, etc).
-    # A porta padrão do Postgres é a 5432.
+    # Expõe a porta padrão do Postgres (5432) para que possamos nos conectar a ele
+    # com ferramentas de banco de dados, se precisarmos.
     ports:
       - "5432:5432"
-    # Variáveis de ambiente para configurar o usuário, senha e nome do banco
-    # que será criado quando o contêiner iniciar pela primeira vez.
+    # Configurações iniciais que o Postgres usará na primeira vez que for criado.
     environment:
+      # Cria um usuário padrão chamado 'dev'.
       POSTGRES_USER: dev
+      # Define a senha para este usuário.
       POSTGRES_PASSWORD: kafka
+      # Cria um banco de dados inicial com este nome.
       POSTGRES_DB: sugestoes_db
-    # A seção 'volumes' garante que os dados do nosso banco de dados
-    # sejam persistidos no nosso computador local. Se o contêiner for
-    # removido, os dados não serão perdidos.
+    # A seção 'volumes' define o "disco rígido" persistente do nosso banco de dados.
     volumes:
+      # Conecta a pasta interna do contêiner onde os dados são salvos
+      # a uma área de armazenamento gerenciada pelo Docker chamada 'postgres_data'.
+      # Isso garante que nossos dados não sejam perdidos se o contêiner for desligado.
       - postgres_data:/var/lib/postgresql/data
 
-# A seção 'volumes' no nível raiz declara o volume que usamos acima.
-# Isso permite que o Docker gerencie o armazenamento para nós.
+# A seção 'volumes' no nível principal do arquivo declara formalmente as áreas
+# de armazenamento que nossos serviços podem usar.
 volumes:
+  # Declara a área de armazenamento 'postgres_data'.
   postgres_data:
