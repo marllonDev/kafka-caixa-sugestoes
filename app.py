@@ -58,7 +58,7 @@ def enviar_sugestao():
 
     # O nome do tópico para onde enviaremos a mensagem.
     # É o mesmo que definimos em nossa arquitetura.
-    topic_name = 'sugestoes-topic'
+    topic_name: str = 'sugestoes-topic'
 
     try:
         # AQUI A MÁGICA ACONTECE!
