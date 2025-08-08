@@ -73,6 +73,48 @@ def save_sugestao(sugestao_data) -> bool:
         db_connection.rollback()
         return False
 
+# --- Função para Obter Todas as Sugestões ---
+def get_all_sugestoes(): 
+    """
+    Busca todas as sugestões salvas no banco de dados.
+
+    Returns:
+        list: Uma lista de dicionários, onde cada dicionário representa uma sugestão.
+              Retorna uma lista vazia em caso de erro.
+    """
+
+    # Verifica se a conexão com o banco foi estabelecida.
+    if not db_connection:
+        print("🚨 Conexão com o banco de dados não está disponível.")
+        return []
+
+    sugestoes_list: list[dict] = []
+    try:
+        # Cria um 'cursor' para executar os comandos SQL.
+        # O 'with' garante que o cursor será fechado automaticamente.
+        with db_connection.cursor() as cursor:
+            # Executa um SELECT em toda a tabela sugestoes.
+            sql = 'SELECT id, autor, sugestao, data_recebimento FROM sugestoes ORDER BY id DESC;'
+            cursor.execute(sql)
+            # Pega o nome das colunas a partir da descrição do cursor.
+            # Isso é um "truque" para transformar o resultado em um dicionário facilmente.
+            colnames = [desc[0] for desc in cursor.description]
+
+            # O fetchall() busca todas as linhas retornadas pela consulta.
+            sugestoes = cursor.fetchall()
+
+            # Transforma cada linha (que vem como uma tupla) em um dicionário.
+            for sugestao in sugestoes:
+                sugestoes_list.append(dict(zip(colnames, sugestao)))
+            print(f"🔍 Foram encontradas {len(sugestoes_list)} sugestões no banco de dados.")
+            return sugestoes_list
+
+    except Exception as e:
+        print(f"🔥 Erro ao buscar sugestões no banco de dados: {e}")
+        # Retornamos uma lista vazia em caso de erro para não quebrar a aplicação.
+        return []
+
+
 # --- Função para Fechar a Conexão ---
 def close_database() -> None:
     """Fecha a conexão com o banco de dados, se ela estiver aberta."""
