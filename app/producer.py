@@ -8,7 +8,7 @@ from . import config  # Importa as nossas configurações centralizadas
 producer = None
 
 # --- Função de Inicialização ---
-def initialize_producer():
+def initialize_producer() -> None:
     """
     Inicializa a conexão com o Kafka e cria a instância do produtor.
     Esta função será chamada uma vez quando a nossa API iniciar.
