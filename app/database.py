@@ -7,7 +7,7 @@ from . import config  # Importa as nossas configurações centralizadas
 db_connection = None
 
 # --- Função de Inicialização ---
-def initialize_database() -> None:
+def initialize_database() -> bool:
     """
     Inicializa a conexão com o banco de dados PostgreSQL.
     Esta função será chamada uma vez quando o consumidor iniciar.
@@ -24,9 +24,11 @@ def initialize_database() -> None:
             password=config.DB_PASSWORD
         )
         print("✅ Conexão com o PostgreSQL inicializada com sucesso!")
+        return True
     except Exception as e:
         print(f"❌ Erro ao inicializar a conexão com o PostgreSQL: {e}")
         db_connection = None
+        return False
 
 # --- Função para Salvar a Sugestão ---
 def save_sugestao(sugestao_data) -> bool:
