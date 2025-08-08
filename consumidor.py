@@ -1,17 +1,26 @@
 import json
 import time
 import psycopg2
+import os
+from dotenv import load_dotenv
 from kafka import KafkaConsumer
 
+# Carrega as variáveis do arquivo .env para o ambiente
+load_dotenv()
 
-TOPIC_NAME = 'sugestoes-topic' # Nome do tópico que vamos "ouvir"
-GROUP_ID = 'grupo-sugestoes-arquivistas' # ID do grupo de consumidores para nossa "equipe de operários"
-BOOTSTRAP_SERVERS = 'localhost:9092' # Endereço do nosso servidor Kafka (agora acessível do seu PC)
-DB_HOST = "localhost" # Usamos o nome localhost pois esse consumidor roda neste PC, não em um contâiner docker
-DB_PORT = "5432"
-DB_NAME = "sugestoes_db"
-DB_USER = "dev"
-DB_PASSWORD = "kafka"
+# --- 1. Configurações Lidas do Ambiente ---
+
+# Configurações do Kafka
+TOPIC_NAME: str | None = os.getenv('KAFKA_TOPIC')
+GROUP_ID: str | None = os.getenv('KAFKA_CONSUMER_GROUP')
+BOOTSTRAP_SERVERS: str | None = os.getenv('KAFKA_SERVER')
+
+# Configurações do Banco de Dados PostgreSQL
+DB_HOST: str | None = os.getenv('DB_HOST') 
+DB_PORT: str | None = os.getenv('DB_PORT')
+DB_NAME: str | None = os.getenv('DB_NAME')
+DB_USER: str | None = os.getenv('DB_USER')
+DB_PASSWORD: str | None = os.getenv('DB_PASSWORD')
 
 print("➡️  Iniciando Consumidor Kafka...")
 print(f"   Tópico: {TOPIC_NAME}")
