@@ -1,14 +1,21 @@
-# Arquivo: app.py
-
+import os
+from dotenv import load_dotenv
 import json
 from flask import Flask, request, jsonify
 from kafka import KafkaProducer
+
+# Carrega as variáveis do arquivo .env para o ambiente
+load_dotenv()
 
 # --- 1. Inicialização e Configuração ---
 
 # Cria a nossa aplicação Flask. O '__name__' é uma variável especial do Python
 # que ajuda o Flask a saber onde encontrar outros arquivos, se precisarmos.
-app = Flask(__name__)
+app: Flask = Flask(__name__)
+
+# Lê as configurações do Kafka do ambiente
+KAFKA_SERVER: str | None = os.getenv('KAFKA_SERVER')
+TOPIC_NAME: str | None = os.getenv('KAFKA_TOPIC')
 
 # Configuração do nosso Produtor Kafka.
 # Ele tentará se conectar ao Kafka assim que a aplicação iniciar.
@@ -21,7 +28,7 @@ try:
     #   pega nosso dicionário Python (JSON), o converte para uma string e depois
     #   para o formato de bytes UTF-8, que é o que o Kafka espera.
     producer = KafkaProducer(
-        bootstrap_servers='localhost:9092',
+        bootstrap_servers=KAFKA_SERVER,
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
     print("✅ Produtor Kafka conectado com sucesso!")
@@ -56,17 +63,14 @@ def enviar_sugestao():
         # Se os dados forem inválidos, retornamos um erro 400 (Bad Request).
         return jsonify({"status": "erro", "mensagem": "JSON inválido. 'sugestao' é um campo obrigatório."}), 400
 
-    # O nome do tópico para onde enviaremos a mensagem.
-    # É o mesmo que definimos em nossa arquitetura.
-    topic_name: str = 'sugestoes-topic'
 
     try:
         # AQUI A MÁGICA ACONTECE!
         # Usamos o método 'send' do produtor para enviar a mensagem.
         # - 1º argumento: O nome do tópico.
         # - value: O conteúdo da mensagem (nosso dicionário/JSON).
-        print(f"📨 Enviando sugestão para o tópico '{topic_name}': {dados_sugestao}")
-        producer.send(topic_name, value=dados_sugestao)
+        print(f"📨 Enviando sugestão para o tópico '{TOPIC_NAME}': {dados_sugestao}")
+        producer.send(TOPIC_NAME, value=dados_sugestao)
         
         # O Kafka Producer funciona de forma assíncrona. As mensagens são colocadas
         # em um buffer e enviadas em background. 'flush()' força o envio
