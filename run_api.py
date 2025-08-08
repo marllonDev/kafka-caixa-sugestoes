@@ -1,6 +1,7 @@
 # Importamos as peças que precisamos de dentro do nosso pacote 'app'
 from app.routes import app
 from app.producer import initialize_producer
+from app.database import initialize_database
 
 # A "mágica" acontece aqui.
 # Este é o ponto de entrada principal para rodar nossa API.
@@ -13,6 +14,7 @@ if __name__ == '__main__':
     # começar a aceitar requisições dos usuários.
     print("Iniciando o serviço da API de Sugestões...")
     initialize_producer()
+    initialize_database()
 
     # PASSO 2: Depois que o produtor está pronto, iniciamos o servidor Flask.
     # A variável 'app' que importamos de 'routes' contém todas as nossas
