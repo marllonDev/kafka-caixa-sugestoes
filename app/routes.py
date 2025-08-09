@@ -1,3 +1,4 @@
+from flask_cors import CORS
 from flask import Flask, request, jsonify, json
 from . import producer  # Importa o nosso módulo producer
 from . import config    # Importa o nosso módulo de configuração
@@ -7,6 +8,7 @@ from . import database  # Importa o nosso módulo de banco de dados
 # Aqui criamos a instância principal da nossa aplicação Flask.
 # Mais tarde, nosso script 'run_api.py' irá importar esta variável 'app'.
 app: Flask = Flask(__name__)
+CORS(app)
 
 # --- Definição do Endpoint POST da API ---
 @app.route('/sugestao', methods=['POST'])

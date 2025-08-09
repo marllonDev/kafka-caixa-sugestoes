@@ -2,3 +2,4 @@ Flask
 kafka-python
 psycopg2-binary
 python-dotenv
+Flask-Cors
